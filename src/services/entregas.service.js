@@ -1,18 +1,13 @@
 import { ErroHttp } from '../utils/erro-http.js';
-
-export const STATUS = {
-  CRIADA: 'CRIADA',
-  EM_TRANSITO: 'EM_TRANSITO',
-  ENTREGUE: 'ENTREGUE',
-  CANCELADA: 'CANCELADA',
-};
+import { STATUS_ENTREGA } from '../utils/status.js';
+import { limparTexto, validarId } from '../utils/validacoes.js';
 
 const PROXIMO_STATUS = {
-  [STATUS.CRIADA]: STATUS.EM_TRANSITO,
-  [STATUS.EM_TRANSITO]: STATUS.ENTREGUE,
+  [STATUS_ENTREGA.CRIADA]: STATUS_ENTREGA.EM_TRANSITO,
+  [STATUS_ENTREGA.EM_TRANSITO]: STATUS_ENTREGA.ENTREGUE,
 };
 
-const STATUS_FINAIS = [STATUS.ENTREGUE, STATUS.CANCELADA];
+const STATUS_FINAIS = [STATUS_ENTREGA.ENTREGUE, STATUS_ENTREGA.CANCELADA];
 
 export class EntregasService {
   constructor(entregasRepository) {
@@ -30,7 +25,7 @@ export class EntregasService {
       descricao,
       origem,
       destino,
-      status: STATUS.CRIADA,
+      status: STATUS_ENTREGA.CRIADA,
       motoristaId: null,
       historico: [criarEvento('Entrega criada com status CRIADA')],
     });
@@ -41,7 +36,7 @@ export class EntregasService {
 
     if (statusDesejado === undefined) return entregas;
 
-    if (!Object.hasOwn(STATUS, statusDesejado)) {
+    if (!Object.hasOwn(STATUS_ENTREGA, statusDesejado)) {
       throw new ErroHttp(400, `status inválido: ${statusDesejado}`);
     }
 
@@ -78,7 +73,7 @@ export class EntregasService {
       throw new ErroHttp(422, `não é possível cancelar uma entrega ${entrega.status}`);
     }
 
-    return this.mudarStatus(entrega, STATUS.CANCELADA);
+    return this.mudarStatus(entrega, STATUS_ENTREGA.CANCELADA);
   }
 
   mudarStatus(entrega, novoStatus) {
@@ -115,20 +110,6 @@ function validarDadosDeCriacao(dados = {}) {
   return { descricao, origem, destino };
 }
 
-function validarId(id) {
-  const numero = Number(id);
-
-  if (!Number.isInteger(numero) || numero < 1) {
-    throw new ErroHttp(400, `id inválido: ${id}`);
-  }
-
-  return numero;
-}
-
 function criarEvento(descricao) {
   return { data: new Date().toISOString(), descricao };
-}
-
-function limparTexto(valor) {
-  return typeof valor === 'string' ? valor.trim() : '';
 }
