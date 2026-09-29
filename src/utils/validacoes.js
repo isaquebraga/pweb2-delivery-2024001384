@@ -1,4 +1,5 @@
 import { ErroHttp } from './erro-http.js';
+import { STATUS_ENTREGA } from './status.js';
 
 export function validarId(id, campo = 'id') {
   const numero = Number(id);
@@ -8,6 +9,14 @@ export function validarId(id, campo = 'id') {
   }
 
   return numero;
+}
+
+export function validarFiltroDeStatus(status) {
+  if (status !== undefined && !Object.hasOwn(STATUS_ENTREGA, status)) {
+    throw new ErroHttp(400, `status inválido: ${status}`);
+  }
+
+  return status;
 }
 
 export function limparTexto(valor) {

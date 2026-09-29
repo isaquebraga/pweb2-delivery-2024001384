@@ -1,10 +1,17 @@
+/** @implements {import('./contratos.js').IEntregasRepository} */
 export class EntregasRepository {
   constructor(banco) {
     this.banco = banco;
   }
 
-  listarTodas() {
-    return [...this.banco.entregas];
+  listarTodos(filtros = {}) {
+    const { status, motoristaId } = filtros;
+
+    return this.banco.entregas.filter(
+      (entrega) =>
+        (status === undefined || entrega.status === status) &&
+        (motoristaId === undefined || entrega.motoristaId === motoristaId),
+    );
   }
 
   buscarPorId(id) {

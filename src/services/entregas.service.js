@@ -1,6 +1,6 @@
 import { ErroHttp } from '../utils/erro-http.js';
 import { STATUS_ENTREGA } from '../utils/status.js';
-import { limparTexto, validarId } from '../utils/validacoes.js';
+import { limparTexto, validarFiltroDeStatus, validarId } from '../utils/validacoes.js';
 
 const PROXIMO_STATUS = {
   [STATUS_ENTREGA.CRIADA]: STATUS_ENTREGA.EM_TRANSITO,
@@ -10,6 +10,7 @@ const PROXIMO_STATUS = {
 const STATUS_FINAIS = [STATUS_ENTREGA.ENTREGUE, STATUS_ENTREGA.CANCELADA];
 
 export class EntregasService {
+  /** @param {import('../repositories/contratos.js').IEntregasRepository} entregasRepository */
   constructor(entregasRepository) {
     this.entregasRepository = entregasRepository;
   }
@@ -31,16 +32,8 @@ export class EntregasService {
     });
   }
 
-  listar(statusDesejado) {
-    const entregas = this.entregasRepository.listarTodas();
-
-    if (statusDesejado === undefined) return entregas;
-
-    if (!Object.hasOwn(STATUS_ENTREGA, statusDesejado)) {
-      throw new ErroHttp(400, `status inválido: ${statusDesejado}`);
-    }
-
-    return entregas.filter((entrega) => entrega.status === statusDesejado);
+  listar(status) {
+    return this.entregasRepository.listarTodos({ status: validarFiltroDeStatus(status) });
   }
 
   buscarPorId(id) {
@@ -84,7 +77,7 @@ export class EntregasService {
   }
 
   existeEntregaAtivaIgual(descricao, origem, destino) {
-    return this.entregasRepository.listarTodas().some(
+    return this.entregasRepository.listarTodos().some(
       (entrega) =>
         !STATUS_FINAIS.includes(entrega.status) &&
         entrega.descricao === descricao &&
