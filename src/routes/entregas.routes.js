@@ -9,6 +9,7 @@ export function criarRotasDeEntregas(entregasController) {
   rotas.get('/:id/historico', entregasController.listarHistorico);
   rotas.patch('/:id/avancar', entregasController.avancar);
   rotas.patch('/:id/cancelar', entregasController.cancelar);
+  rotas.patch('/:id/atribuir', entregasController.atribuir);
 
   return rotas;
 }

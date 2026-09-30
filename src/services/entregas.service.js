@@ -1,5 +1,5 @@
 import { ErroHttp } from '../utils/erro-http.js';
-import { STATUS_ENTREGA } from '../utils/status.js';
+import { STATUS_ENTREGA, STATUS_MOTORISTA } from '../utils/status.js';
 import { limparTexto, validarFiltroDeStatus, validarId } from '../utils/validacoes.js';
 
 const PROXIMO_STATUS = {
@@ -10,9 +10,13 @@ const PROXIMO_STATUS = {
 const STATUS_FINAIS = [STATUS_ENTREGA.ENTREGUE, STATUS_ENTREGA.CANCELADA];
 
 export class EntregasService {
-  /** @param {import('../repositories/contratos.js').IEntregasRepository} entregasRepository */
-  constructor(entregasRepository) {
+  /**
+   * @param {import('../repositories/contratos.js').IEntregasRepository} entregasRepository
+   * @param {import('../repositories/contratos.js').IMotoristasRepository} motoristasRepository
+   */
+  constructor(entregasRepository, motoristasRepository) {
     this.entregasRepository = entregasRepository;
+    this.motoristasRepository = motoristasRepository;
   }
 
   criar(dados) {
@@ -67,6 +71,26 @@ export class EntregasService {
     }
 
     return this.mudarStatus(entrega, STATUS_ENTREGA.CANCELADA);
+  }
+
+  atribuir(id, motoristaId) {
+    const entrega = this.buscarPorId(id);
+    const motorista = this.motoristasRepository.buscarPorId(validarId(motoristaId, 'motoristaId'));
+
+    if (!motorista) throw new ErroHttp(404, 'motorista não encontrado');
+
+    if (entrega.status !== STATUS_ENTREGA.CRIADA) {
+      throw new ErroHttp(422, `não é possível atribuir motorista a uma entrega ${entrega.status}`);
+    }
+
+    if (motorista.status !== STATUS_MOTORISTA.ATIVO) {
+      throw new ErroHttp(422, `não é possível atribuir um motorista ${motorista.status}`);
+    }
+
+    return this.entregasRepository.atualizar(entrega.id, {
+      motoristaId: motorista.id,
+      historico: [...entrega.historico, criarEvento(`Entrega atribuída ao motorista ${motorista.nome}`)],
+    });
   }
 
   mudarStatus(entrega, novoStatus) {

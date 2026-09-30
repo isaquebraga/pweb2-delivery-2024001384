@@ -16,7 +16,7 @@ export function criarRotas() {
   const entregasRepository = new EntregasRepository(banco);
   const motoristasRepository = new MotoristasRepository(banco);
 
-  const entregasService = new EntregasService(entregasRepository);
+  const entregasService = new EntregasService(entregasRepository, motoristasRepository);
   const motoristasService = new MotoristasService(motoristasRepository, entregasRepository);
 
   const entregasController = new EntregasController(entregasService);
