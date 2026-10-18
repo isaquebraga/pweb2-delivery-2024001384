@@ -4,7 +4,7 @@ export class EntregasRepository {
     this.banco = banco;
   }
 
-  listarTodos(filtros = {}) {
+  async listarTodos(filtros = {}) {
     const { status, motoristaId } = filtros;
 
     return this.banco.entregas.filter(
@@ -14,11 +14,11 @@ export class EntregasRepository {
     );
   }
 
-  buscarPorId(id) {
+  async buscarPorId(id) {
     return this.banco.entregas.find((entrega) => entrega.id === id) ?? null;
   }
 
-  criar(dados) {
+  async criar(dados) {
     const entrega = { id: this.banco.proximoIdDeEntrega, ...dados };
 
     this.banco.proximoIdDeEntrega += 1;
@@ -27,7 +27,7 @@ export class EntregasRepository {
     return entrega;
   }
 
-  atualizar(id, dados) {
+  async atualizar(id, dados) {
     const posicao = this.banco.entregas.findIndex((entrega) => entrega.id === id);
     if (posicao === -1) return null;
 

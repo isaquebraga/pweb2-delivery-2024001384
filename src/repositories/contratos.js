@@ -33,30 +33,32 @@
 /**
  * Contrato de persistência de entregas.
  * Os services dependem apenas destes métodos, nunca da implementação concreta.
+ * Todo método é assíncrono: devolve uma Promise, esteja o dado em memória ou no banco.
  *
  * @typedef {Object} IEntregasRepository
- * @property {(filtros?: FiltrosDeEntrega) => Entrega[]} listarTodos
+ * @property {(filtros?: FiltrosDeEntrega) => Promise<Entrega[]>} listarTodos
  *   lista as entregas que atendem a todos os filtros informados; sem filtros, lista todas
- * @property {(id: number) => Entrega | null} buscarPorId
+ * @property {(id: number) => Promise<Entrega | null>} buscarPorId
  *   busca a entrega pelo id; devolve null se ela não existir
- * @property {(dados: Omit<Entrega, 'id'>) => Entrega} criar
+ * @property {(dados: Omit<Entrega, 'id'>) => Promise<Entrega>} criar
  *   grava uma nova entrega e devolve ela com o id gerado
- * @property {(id: number, dados: Partial<Entrega>) => Entrega | null} atualizar
+ * @property {(id: number, dados: Partial<Entrega>) => Promise<Entrega | null>} atualizar
  *   mescla os dados na entrega existente e devolve ela atualizada; null se ela não existir
  */
 
 /**
  * Contrato de persistência de motoristas.
  * Os services dependem apenas destes métodos, nunca da implementação concreta.
+ * Todo método é assíncrono: devolve uma Promise, esteja o dado em memória ou no banco.
  *
  * @typedef {Object} IMotoristasRepository
- * @property {() => Motorista[]} listarTodos
+ * @property {() => Promise<Motorista[]>} listarTodos
  *   lista todos os motoristas
- * @property {(id: number) => Motorista | null} buscarPorId
+ * @property {(id: number) => Promise<Motorista | null>} buscarPorId
  *   busca o motorista pelo id; devolve null se ele não existir
- * @property {(cpf: string) => Motorista | null} buscarPorCpf
+ * @property {(cpf: string) => Promise<Motorista | null>} buscarPorCpf
  *   busca o motorista pelo cpf; devolve null se ele não existir
- * @property {(dados: Omit<Motorista, 'id'>) => Motorista} criar
+ * @property {(dados: Omit<Motorista, 'id'>) => Promise<Motorista>} criar
  *   grava um novo motorista e devolve ele com o id gerado
  */
 

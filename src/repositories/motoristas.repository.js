@@ -4,19 +4,19 @@ export class MotoristasRepository {
     this.banco = banco;
   }
 
-  listarTodos() {
+  async listarTodos() {
     return [...this.banco.motoristas];
   }
 
-  buscarPorId(id) {
+  async buscarPorId(id) {
     return this.banco.motoristas.find((motorista) => motorista.id === id) ?? null;
   }
 
-  buscarPorCpf(cpf) {
+  async buscarPorCpf(cpf) {
     return this.banco.motoristas.find((motorista) => motorista.cpf === cpf) ?? null;
   }
 
-  criar(dados) {
+  async criar(dados) {
     const motorista = { id: this.banco.proximoIdDeMotorista, ...dados };
 
     this.banco.proximoIdDeMotorista += 1;

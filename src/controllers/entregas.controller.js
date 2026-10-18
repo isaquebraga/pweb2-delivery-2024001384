@@ -5,63 +5,63 @@ export class EntregasController {
     this.entregasService = entregasService;
   }
 
-  criar = (req, res) => {
+  criar = async (req, res) => {
     try {
-      const entrega = this.entregasService.criar(req.body);
+      const entrega = await this.entregasService.criar(req.body);
       res.status(201).json(entrega);
     } catch (erro) {
       responderErro(res, erro);
     }
   };
 
-  listar = (req, res) => {
+  listar = async (req, res) => {
     try {
-      const entregas = this.entregasService.listar(req.query.status);
+      const entregas = await this.entregasService.listar(req.query.status);
       res.status(200).json(entregas);
     } catch (erro) {
       responderErro(res, erro);
     }
   };
 
-  buscarPorId = (req, res) => {
+  buscarPorId = async (req, res) => {
     try {
-      const entrega = this.entregasService.buscarPorId(req.params.id);
+      const entrega = await this.entregasService.buscarPorId(req.params.id);
       res.status(200).json(entrega);
     } catch (erro) {
       responderErro(res, erro);
     }
   };
 
-  listarHistorico = (req, res) => {
+  listarHistorico = async (req, res) => {
     try {
-      const historico = this.entregasService.listarHistorico(req.params.id);
+      const historico = await this.entregasService.listarHistorico(req.params.id);
       res.status(200).json(historico);
     } catch (erro) {
       responderErro(res, erro);
     }
   };
 
-  avancar = (req, res) => {
+  avancar = async (req, res) => {
     try {
-      const entrega = this.entregasService.avancar(req.params.id);
+      const entrega = await this.entregasService.avancar(req.params.id);
       res.status(200).json(entrega);
     } catch (erro) {
       responderErro(res, erro);
     }
   };
 
-  cancelar = (req, res) => {
+  cancelar = async (req, res) => {
     try {
-      const entrega = this.entregasService.cancelar(req.params.id);
+      const entrega = await this.entregasService.cancelar(req.params.id);
       res.status(200).json(entrega);
     } catch (erro) {
       responderErro(res, erro);
     }
   };
 
-  atribuir = (req, res) => {
+  atribuir = async (req, res) => {
     try {
-      const entrega = this.entregasService.atribuir(req.params.id, req.body.motoristaId);
+      const entrega = await this.entregasService.atribuir(req.params.id, req.body.motoristaId);
       res.status(200).json(entrega);
     } catch (erro) {
       responderErro(res, erro);

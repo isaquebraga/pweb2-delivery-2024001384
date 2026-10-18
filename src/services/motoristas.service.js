@@ -12,10 +12,10 @@ export class MotoristasService {
     this.entregasRepository = entregasRepository;
   }
 
-  criar(dados) {
+  async criar(dados) {
     const { nome, cpf, placaVeiculo } = validarDadosDeCriacao(dados);
 
-    if (this.motoristasRepository.buscarPorCpf(cpf)) {
+    if (await this.motoristasRepository.buscarPorCpf(cpf)) {
       throw new ErroHttp(409, `já existe um motorista cadastrado com o cpf ${cpf}`);
     }
 
@@ -27,20 +27,20 @@ export class MotoristasService {
     });
   }
 
-  listar() {
+  async listar() {
     return this.motoristasRepository.listarTodos();
   }
 
-  buscarPorId(id) {
-    const motorista = this.motoristasRepository.buscarPorId(validarId(id));
+  async buscarPorId(id) {
+    const motorista = await this.motoristasRepository.buscarPorId(validarId(id));
 
     if (!motorista) throw new ErroHttp(404, 'motorista não encontrado');
 
     return motorista;
   }
 
-  listarEntregas(id, status) {
-    const motorista = this.buscarPorId(id);
+  async listarEntregas(id, status) {
+    const motorista = await this.buscarPorId(id);
 
     return this.entregasRepository.listarTodos({
       motoristaId: motorista.id,
