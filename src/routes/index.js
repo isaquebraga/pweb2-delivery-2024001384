@@ -1,8 +1,8 @@
 import { Router } from 'express';
 
-import { criarBancoEmMemoria } from '../database/banco-em-memoria.js';
-import { EntregasRepository } from '../repositories/entregas.repository.js';
-import { MotoristasRepository } from '../repositories/motoristas.repository.js';
+import { prisma } from '../config/database.js';
+import { EntregasRepositoryPrisma } from '../repositories/entregas.repository.prisma.js';
+import { MotoristasRepositoryPrisma } from '../repositories/motoristas.repository.prisma.js';
 import { EntregasService } from '../services/entregas.service.js';
 import { MotoristasService } from '../services/motoristas.service.js';
 import { EntregasController } from '../controllers/entregas.controller.js';
@@ -11,10 +11,8 @@ import { criarRotasDeEntregas } from './entregas.routes.js';
 import { criarRotasDeMotoristas } from './motoristas.routes.js';
 
 export function criarRotas() {
-  const banco = criarBancoEmMemoria();
-
-  const entregasRepository = new EntregasRepository(banco);
-  const motoristasRepository = new MotoristasRepository(banco);
+  const entregasRepository = new EntregasRepositoryPrisma(prisma);
+  const motoristasRepository = new MotoristasRepositoryPrisma(prisma);
 
   const entregasService = new EntregasService(entregasRepository, motoristasRepository);
   const motoristasService = new MotoristasService(motoristasRepository, entregasRepository);
