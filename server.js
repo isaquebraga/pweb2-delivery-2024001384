@@ -7,6 +7,7 @@ import methodOverride from 'method-override';
 
 import { criarRotas } from './src/routes/index.js';
 import { exporMensagens } from './src/middlewares/mensagens.js';
+import { paginaNaoEncontrada, tratarErros } from './src/middlewares/erros.js';
 
 const app = express();
 
@@ -33,7 +34,8 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 app.use('/api', criarRotas());
 
-app.use((req, res) => res.status(404).json({ erro: 'recurso não encontrado' }));
+app.use(paginaNaoEncontrada);
+app.use(tratarErros);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Delivery Tracker rodando em http://localhost:${PORT}`));
