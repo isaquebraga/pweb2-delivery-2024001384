@@ -1,0 +1,21 @@
+<div class="cabecalho">
+  <h1>Nova Entrega</h1>
+</div>
+
+<%- include('../partials/erros') %>
+
+<form action="/entregas" method="POST" class="formulario">
+  <label for="descricao">Descrição</label>
+  <input id="descricao" name="descricao" type="text" value="<%= dados.descricao ?? '' %>">
+
+  <label for="origem">Origem</label>
+  <input id="origem" name="origem" type="text" value="<%= dados.origem ?? '' %>">
+
+  <label for="destino">Destino</label>
+  <input id="destino" name="destino" type="text" value="<%= dados.destino ?? '' %>">
+
+  <div class="acoes">
+    <a href="/entregas" class="botao botao-secundario">Cancelar</a>
+    <button type="submit" class="botao">Criar entrega</button>
+  </div>
+</form>

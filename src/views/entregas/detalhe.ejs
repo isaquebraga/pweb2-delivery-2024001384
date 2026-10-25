@@ -1,0 +1,52 @@
+<div class="cabecalho">
+  <h1>Entrega #<%= entrega.id %></h1>
+  <%- include('../partials/status', { status: entrega.status }) %>
+</div>
+
+<dl class="detalhes">
+  <dt>Descrição</dt>
+  <dd><%= entrega.descricao %></dd>
+  <dt>Origem</dt>
+  <dd><%= entrega.origem %></dd>
+  <dt>Destino</dt>
+  <dd><%= entrega.destino %></dd>
+  <dt>Motorista</dt>
+  <dd><%= motorista ? motorista.nome : 'Não atribuído' %></dd>
+</dl>
+
+<% if (entrega.status === 'CRIADA' || entrega.status === 'EM_TRANSITO') { %>
+  <div class="acoes">
+    <form action="/entregas/<%= entrega.id %>/avancar?_method=PATCH" method="POST">
+      <button type="submit" class="botao">Avançar status</button>
+    </form>
+    <form action="/entregas/<%= entrega.id %>/cancelar?_method=PATCH" method="POST">
+      <button type="submit" class="botao botao-perigo">Cancelar entrega</button>
+    </form>
+  </div>
+<% } %>
+
+<% if (entrega.status === 'CRIADA' && motoristasAtivos.length === 0) { %>
+  <p class="vazio">Nenhum motorista ativo. <a href="/motoristas/novo">Cadastre um motorista</a> para atribuir.</p>
+<% } else if (entrega.status === 'CRIADA') { %>
+  <form action="/entregas/<%= entrega.id %>/atribuir?_method=PATCH" method="POST" class="filtro">
+    <label for="motoristaId">Motorista</label>
+    <select id="motoristaId" name="motoristaId">
+      <% motoristasAtivos.forEach((m) => { %>
+        <option value="<%= m.id %>" <%= m.id === entrega.motoristaId ? 'selected' : '' %>><%= m.nome %></option>
+      <% }) %>
+    </select>
+    <button type="submit" class="botao botao-secundario">Atribuir</button>
+  </form>
+<% } %>
+
+<h2>Histórico</h2>
+<ol class="historico">
+  <% entrega.historico.forEach((evento) => { %>
+    <li>
+      <time datetime="<%= evento.data %>"><%= new Date(evento.data).toLocaleString('pt-BR') %></time>
+      <span><%= evento.descricao %></span>
+    </li>
+  <% }) %>
+</ol>
+
+<a href="/entregas" class="voltar">← Voltar para as entregas</a>
