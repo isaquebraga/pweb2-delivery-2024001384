@@ -17,7 +17,6 @@ app.set('layout', 'layouts/base');
 app.use(expressLayouts);
 
 app.use(express.static(path.join(import.meta.dirname, 'public')));
-app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(methodOverride('_method'));
 app.use(
@@ -32,7 +31,7 @@ app.use(exporMensagens);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
-app.use('/api', criarRotas());
+app.use(criarRotas());
 
 app.use(paginaNaoEncontrada);
 app.use(tratarErros);
