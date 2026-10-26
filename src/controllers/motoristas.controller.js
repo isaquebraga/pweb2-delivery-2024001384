@@ -1,43 +1,31 @@
-import { responderErro } from '../utils/responder.js';
+import { ErroHttp } from '../utils/erro-http.js';
 
 export class MotoristasController {
   constructor(motoristasService) {
     this.motoristasService = motoristasService;
   }
 
-  criar = async (req, res) => {
-    try {
-      const motorista = await this.motoristasService.criar(req.body);
-      res.status(201).json(motorista);
-    } catch (erro) {
-      responderErro(res, erro);
-    }
-  };
-
-  listar = async (req, res) => {
+  listar = async (req, res, next) => {
     try {
       const motoristas = await this.motoristasService.listar();
-      res.status(200).json(motoristas);
+      res.render('motoristas/index', { motoristas });
     } catch (erro) {
-      responderErro(res, erro);
+      next(erro);
     }
   };
 
-  buscarPorId = async (req, res) => {
-    try {
-      const motorista = await this.motoristasService.buscarPorId(req.params.id);
-      res.status(200).json(motorista);
-    } catch (erro) {
-      responderErro(res, erro);
-    }
+  novo = (req, res) => {
+    res.render('motoristas/novo', { erros: [], dados: {} });
   };
 
-  listarEntregas = async (req, res) => {
+  criar = async (req, res, next) => {
     try {
-      const entregas = await this.motoristasService.listarEntregas(req.params.id, req.query.status);
-      res.status(200).json(entregas);
+      const motorista = await this.motoristasService.criar(req.body);
+      req.flash('sucesso', `Motorista ${motorista.nome} cadastrado com sucesso`);
+      res.redirect('/motoristas');
     } catch (erro) {
-      responderErro(res, erro);
+      if (!(erro instanceof ErroHttp)) return next(erro);
+      res.status(erro.status).render('motoristas/novo', { erros: [erro.message], dados: req.body });
     }
   };
 }
