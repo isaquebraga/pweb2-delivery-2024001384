@@ -1,0 +1,21 @@
+<div class="cabecalho">
+  <h1>Novo Motorista</h1>
+</div>
+
+<%- include('../partials/erros') %>
+
+<form action="/motoristas" method="POST" class="formulario">
+  <label for="nome">Nome</label>
+  <input id="nome" name="nome" type="text" value="<%= dados.nome ?? '' %>">
+
+  <label for="cpf">CPF</label>
+  <input id="cpf" name="cpf" type="text" value="<%= dados.cpf ?? '' %>">
+
+  <label for="placaVeiculo">Placa do veículo <small>(opcional)</small></label>
+  <input id="placaVeiculo" name="placaVeiculo" type="text" value="<%= dados.placaVeiculo ?? '' %>">
+
+  <div class="acoes">
+    <a href="/motoristas" class="botao botao-secundario">Cancelar</a>
+    <button type="submit" class="botao">Cadastrar motorista</button>
+  </div>
+</form>
