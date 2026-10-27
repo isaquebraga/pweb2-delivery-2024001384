@@ -21,6 +21,7 @@ export function criarRotas() {
   const motoristasController = new MotoristasController(motoristasService);
 
   const rotas = Router();
+  rotas.get('/', (req, res) => res.redirect('/entregas'));
   rotas.use('/entregas', criarRotasDeEntregas(entregasController));
   rotas.use('/motoristas', criarRotasDeMotoristas(motoristasController));
 
