@@ -1,6 +1,5 @@
 name: Autograding
 
-# Roda a cada push (e manualmente). Corrige a conformidade da API (comportamento).
 on:
   push:
   workflow_dispatch:

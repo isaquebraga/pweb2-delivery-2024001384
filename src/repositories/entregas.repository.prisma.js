@@ -1,4 +1,3 @@
-// Traz o histórico junto com a entrega, do evento mais antigo para o mais recente.
 const COM_HISTORICO = {
   historico: {
     select: { data: true, descricao: true },
@@ -6,7 +5,6 @@ const COM_HISTORICO = {
   },
 };
 
-// Código do Prisma para "o registro que você quer alterar não existe".
 const REGISTRO_NAO_ENCONTRADO = 'P2025';
 
 /** @implements {import('./contratos.js').IEntregasRepository} */
@@ -56,7 +54,6 @@ export class EntregasRepositoryPrisma {
         where: { id },
         data: {
           ...campos,
-          // o contrato recebe o histórico inteiro: os eventos antigos dão lugar à lista nova
           historico: historico && { deleteMany: {}, create: historico },
         },
         include: COM_HISTORICO,
@@ -70,7 +67,6 @@ export class EntregasRepositoryPrisma {
   }
 }
 
-// O banco devolve a data do evento como Date; o contrato promete uma string ISO.
 function paraEntrega(entrega) {
   return {
     ...entrega,
