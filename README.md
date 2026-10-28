@@ -1,18 +1,21 @@
-# Delivery Tracker API
+# Delivery Tracker
 
-API REST para rastrear o ciclo de vida de entregas e os motoristas que as realizam,
-feita com **Node + Express** e **arquitetura em camadas**. Os dados ficam num banco
-**SQLite**, acessado pelo **Prisma ORM** — sobrevivem a reinícios do servidor.
+Sistema web para rastrear o ciclo de vida de entregas e os motoristas que as realizam,
+feito com **Node + Express** e **arquitetura em camadas**. As páginas são
+**renderizadas no servidor (SSR) com EJS**, e os dados ficam num banco **SQLite**,
+acessado pelo **Prisma ORM**.
 
-> **Programação Web II** — IFAL/Maceió · Capítulo 5 · **Atividade 07**.
-> Nesta etapa a persistência em memória dá lugar ao **Prisma + SQLite**, com
-> **migrations versionadas** — sem mudar o comportamento da API.
+> **Programação Web II** — IFAL/Maceió · Capítulo 6 · **Atividade 08**.
+> Nesta etapa a API JSON dá lugar a uma **interface web**: listagens, formulários e
+> ações por botão — sem mudar os services nem os repositories do Cap. 5.
+
+![Tela de entregas](docs/tela-entregas.png)
 
 ---
 
 ## Requisitos
 
-- **Node 18+** (o autograder usa o `fetch` global)
+- **Node 20.11+**
 - npm
 
 ## Como executar
@@ -21,14 +24,14 @@ feita com **Node + Express** e **arquitetura em camadas**. Os dados ficam num ba
 npm install                  # instala e gera o Prisma Client (postinstall)
 cp .env.example .env         # DATABASE_URL="file:./dev.db"
 npx prisma migrate dev       # cria o banco e aplica as migrations
-npm start
+npm run dev                  # abra http://localhost:3000 no navegador
 ```
 
-A API sobe em <http://localhost:3000> e respeita a variável `PORT`:
+O servidor respeita a variável `PORT` e mantém `GET /api/health` → `{ "status": "ok" }`
+só para checar se ele subiu:
 
 ```bash
 PORT=8080 npm start     # http://localhost:8080
-npm run dev             # com reload automático
 ```
 
 ### Banco de dados
@@ -44,9 +47,6 @@ fora do git, assim como o `.env`.
 | `npx prisma studio`         | `npm run db:studio`  | abre uma interface web para ver e editar os dados           |
 | `npx prisma generate`       | —                    | regera o Prisma Client (já roda sozinho no `npm install`)   |
 
-Para conferir que os dados persistem: crie uma entrega, pare o servidor (`Ctrl+C`),
-suba de novo e busque a entrega pelo id — ela continua lá.
-
 ### Rodando o autograder
 
 Com o servidor no ar, em outro terminal:
@@ -55,16 +55,18 @@ Com o servidor no ar, em outro terminal:
 npm run check           # = BASE_URL=http://localhost:3000 node autograder/check.mjs
 ```
 
-As **15 checagens passam (122/122)**: 10 de Entregas e 5 de Motoristas — as mesmas
-da Atividade 06, porque o contrato da API não mudou. No GitHub Actions o workflow roda
-`prisma migrate deploy` antes de subir o servidor.
+O autograder age como um navegador: confere os status HTTP, o redirect do PRG e procura
+trechos no HTML (tabela, formulário, badge de status, histórico). No GitHub Actions o
+workflow roda `prisma migrate deploy` antes de subir o servidor.
 
 ---
 
 ## Estrutura do projeto
 
 ```
-server.js                 configura o Express e monta a API em /api
+server.js                 configura o Express, o EJS e os middlewares e monta as rotas
+public/css/               folha de estilo das páginas
+docs/                     print da tela de entregas
 autograder/               correção automática (vem do repositório-modelo)
 enunciados/               enunciados das atividades em PDF
 prisma/
@@ -73,13 +75,56 @@ prisma/
 src/
 ├── config/               singleton do Prisma Client (database.js)
 ├── routes/               composition root: injeta as dependências
-├── controllers/          traduz HTTP <-> service (sem regra de negócio)
+├── middlewares/          mensagens flash, validação dos forms, erros e 404 em HTML
+├── validators/           regras do express-validator de cada formulário
+├── controllers/          traduz HTTP <-> service: renderiza views ou redireciona
 ├── services/             TODA a regra de negócio
 ├── repositories/         só acesso a dados + contratos (contratos.js)
 │                         *.repository.prisma.js → banco · *.repository.js → memória
 ├── database/             persistência em memória (implementação alternativa)
-└── utils/                erro com status HTTP, resposta de erro, status e validações
+├── utils/                erro com status HTTP, status e validações
+└── views/
+    ├── layouts/base.ejs  esqueleto HTML comum a todas as páginas
+    ├── partials/         navbar, flash, badge de status e lista de erros do form
+    ├── entregas/         index (listagem), nova (formulário), detalhe
+    ├── motoristas/       index (listagem), novo (formulário)
+    └── erro.ejs          página de erro (404, 400, 500…)
 ```
+
+## Renderização no servidor (SSR)
+
+O navegador pede uma URL, o Express monta o HTML completo no servidor e devolve a
+página pronta. O controller não devolve mais JSON: ele chama `res.render(view, dados)`
+ou, depois de gravar algo, `res.redirect(...)`.
+
+| Peça                  | Pacote                | Papel                                                              |
+| --------------------- | --------------------- | ------------------------------------------------------------------ |
+| View engine           | `ejs`                 | transforma `src/views/*.ejs` + dados em HTML                       |
+| Layout                | `express-ejs-layouts` | encaixa cada view dentro de `layouts/base.ejs` (`<%- body %>`)     |
+| Sessão                | `express-session`     | guarda as mensagens flash entre um redirect e a próxima página     |
+| Flash                 | `connect-flash`       | `req.flash('sucesso', '...')` — a mensagem aparece uma vez só      |
+| Method override       | `method-override`     | `POST /entregas/1/avancar?_method=PATCH` chega como `PATCH`        |
+| Validação             | `express-validator`   | valida os forms e reexibe a página com os erros e os dados         |
+
+Toda saída de dado usa `<%= %>` (escapa HTML); `<%- %>` só aparece para o `body` do
+layout e para os `include` de partials.
+
+### Post-Redirect-Get (PRG)
+
+Toda escrita bem-sucedida responde com **redirect (302)**, nunca com HTML:
+
+```
+POST /entregas  ──►  302 Location: /entregas/5  ──►  GET /entregas/5  (com a mensagem flash)
+```
+
+Assim, apertar F5 na página seguinte repete só o `GET`, nunca a criação.
+
+- **Criar** entrega → redireciona para o detalhe; criar motorista → para a listagem.
+- **Avançar / cancelar / atribuir** → redireciona para o detalhe da entrega, com uma
+  mensagem de sucesso ou com a regra de negócio violada (ex.: *não é possível avançar
+  uma entrega ENTREGUE*).
+- **Formulário inválido** → **não** redireciona: reexibe o form com status `400` (ou
+  `409` para duplicata/CPF repetido), as mensagens e o que foi digitado.
 
 ## Arquitetura em camadas
 
@@ -87,7 +132,8 @@ Cada requisição atravessa as camadas sempre na mesma direção, e cada camada 
 conhece a de baixo:
 
 ```
-requisição → routes → controller → service → repository → Prisma Client → SQLite
+requisição → middlewares → routes → controller → service → repository → Prisma Client → SQLite
+                                    └──► view EJS → HTML
 ```
 
 O Prisma Client só aparece na camada de repository (e no composition root, que o
@@ -95,7 +141,7 @@ entrega pronto). Services e controllers não sabem que existe banco.
 
 | Camada         | Pode                                                  | Não pode                 |
 | -------------- | ----------------------------------------------------- | ------------------------ |
-| **Controller** | ler a requisição, chamar o service, montar a resposta | decidir regra de negócio |
+| **Controller** | ler a requisição, chamar o service, renderizar a view ou redirecionar | decidir regra de negócio |
 | **Service**    | validar, aplicar regras, orquestrar os repositories   | falar de `req`/`res`     |
 | **Repository** | ler e gravar dados                                    | decidir regra de negócio |
 
@@ -143,22 +189,25 @@ const motoristasRepository = new MotoristasRepositoryPrisma(prisma);
 const entregasService = new EntregasService(entregasRepository, motoristasRepository);
 const motoristasService = new MotoristasService(motoristasRepository, entregasRepository);
 
-const entregasController = new EntregasController(entregasService);
+const entregasController = new EntregasController(entregasService, motoristasService);
 const motoristasController = new MotoristasController(motoristasService);
 ```
 
 ```
 prisma (singleton)
         │
-        ├──► EntregasRepositoryPrisma ─────┬──► EntregasService ────► EntregasController ────► /api/entregas
+        ├──► EntregasRepositoryPrisma ─────┬──► EntregasService ────► EntregasController ────► /entregas
         │                                  └──► MotoristasService
         │
-        └──► MotoristasRepositoryPrisma ───┬──► MotoristasService ──► MotoristasController ──► /api/motoristas
+        └──► MotoristasRepositoryPrisma ───┬──► MotoristasService ──► MotoristasController ──► /motoristas
                                            └──► EntregasService
 ```
 
 Cada service recebe os **dois** repositories: o `EntregasService` consulta o motorista
 na hora de atribuir, e o `MotoristasService` consulta as entregas de um motorista.
+
+O `EntregasController` também recebe o `MotoristasService`, para mostrar o motorista
+da entrega e preencher o `<select>` de atribuição na tela de detalhe.
 
 Trocar a persistência é trocar **uma linha por repository** aqui. Para voltar à
 memória, por exemplo:
@@ -232,204 +281,49 @@ Toda mudança de status registra um novo evento no histórico.
 - **Cadastro** — `nome` e `cpf` obrigatórios (senão `400`); status inicial `ATIVO`.
 - **Unicidade** — proibido cadastrar um `cpf` que já existe → `409`.
 
+
 ---
 
 ## Rotas
 
-Base `/api` · formato JSON · erros sempre como `{ "erro": "mensagem" }`.
+Todas as rotas devolvem páginas HTML (exceto o health check).
 
 ### Entregas
 
-| Método  | Rota                          | Sucesso                           | Erros                                                     |
-| ------- | ----------------------------- | --------------------------------- | --------------------------------------------------------- |
-| `GET`   | `/api/health`                 | `200` `{ "status": "ok" }`        | —                                                         |
-| `POST`  | `/api/entregas`               | `201` entrega criada              | `400` campos / origem == destino · `409` duplicata ativa  |
-| `GET`   | `/api/entregas`               | `200` array                       | —                                                         |
-| `GET`   | `/api/entregas?status=CRIADA` | `200` array filtrado              | `400` status inválido                                     |
-| `GET`   | `/api/entregas/:id`           | `200` entrega                     | `404`                                                     |
-| `PATCH` | `/api/entregas/:id/avancar`   | `200` entrega (novo status)       | `404` · `422` transição inválida                          |
-| `PATCH` | `/api/entregas/:id/cancelar`  | `200` entrega (`CANCELADA`)       | `404` · `422` já `ENTREGUE`/`CANCELADA`                   |
-| `PATCH` | `/api/entregas/:id/atribuir`  | `200` entrega (com `motoristaId`) | `404` · `422` entrega não-`CRIADA` ou motorista `INATIVO` |
-| `GET`   | `/api/entregas/:id/historico` | `200` array de eventos            | `404`                                                     |
+| Método  | Rota                       | Sucesso                                   | Erro                                                       |
+| ------- | -------------------------- | ----------------------------------------- | ---------------------------------------------------------- |
+| `GET`   | `/`                        | `302` → `/entregas`                       | —                                                          |
+| `GET`   | `/entregas`                | `200` tabela + link **Nova Entrega**      | `400` página de erro (status inválido no filtro)           |
+| `GET`   | `/entregas?status=CRIADA`  | `200` tabela filtrada                     | —                                                          |
+| `GET`   | `/entregas/nova`           | `200` formulário (descrição, origem, destino) | —                                                      |
+| `POST`  | `/entregas`                | `302` → `/entregas/:id` + flash           | `400` form com erros · `409` form com "entrega duplicada"  |
+| `GET`   | `/entregas/:id`            | `200` detalhe com status e histórico      | `404` página de erro                                       |
+| `PATCH` | `/entregas/:id/avancar`    | `302` → detalhe + flash                   | `302` → detalhe + flash de erro · `404` entrega inexistente |
+| `PATCH` | `/entregas/:id/cancelar`   | `302` → detalhe + flash                   | `302` → detalhe + flash de erro · `404` entrega inexistente |
+| `PATCH` | `/entregas/:id/atribuir`   | `302` → detalhe + flash                   | `302` → detalhe + flash de erro · `404` entrega inexistente |
 
 ### Motoristas
 
-| Método | Rota                                         | Sucesso                           | Erros                              |
-| ------ | -------------------------------------------- | --------------------------------- | ---------------------------------- |
-| `POST` | `/api/motoristas`                            | `201` motorista (status `ATIVO`)  | `400` campos · `409` CPF duplicado |
-| `GET`  | `/api/motoristas`                            | `200` array                       | —                                  |
-| `GET`  | `/api/motoristas/:id`                        | `200` motorista                   | `404`                              |
-| `GET`  | `/api/motoristas/:id/entregas`               | `200` só as entregas do motorista | `404`                              |
-| `GET`  | `/api/motoristas/:id/entregas?status=CRIADA` | `200` filtro combinado            | `400` status inválido · `404`      |
+| Método | Rota               | Sucesso                         | Erro                                          |
+| ------ | ------------------ | ------------------------------- | --------------------------------------------- |
+| `GET`  | `/motoristas`      | `200` tabela                    | —                                             |
+| `GET`  | `/motoristas/novo` | `200` formulário (nome, cpf, placa) | —                                         |
+| `POST` | `/motoristas`      | `302` → `/motoristas` + flash   | `400` form com erros · `409` CPF duplicado    |
 
-### Códigos de status
+### Outras
 
-| Código | Quando                                                         |
-| ------ | -------------------------------------------------------------- |
-| `200`  | sucesso em `GET`/`PATCH` que retorna recurso                   |
-| `201`  | `POST` que cria recurso                                        |
-| `400`  | entrada inválida (campo faltando, `origem` == `destino`)       |
-| `404`  | recurso não encontrado                                         |
-| `409`  | conflito de unicidade (duplicata ativa, CPF duplicado)         |
-| `422`  | violação de regra de estado (transição ou atribuição inválida) |
+| Método | Rota           | Resposta                       |
+| ------ | -------------- | ------------------------------ |
+| `GET`  | `/api/health`  | `200` `{ "status": "ok" }`     |
+| —      | qualquer outra | `404` página "Não encontrado"  |
 
----
+## Telas
 
-## Exemplos de requisição (curl)
-
-**Health check**
-
-```bash
-curl http://localhost:3000/api/health
-# {"status":"ok"}
-```
-
-**Criar uma entrega**
-
-```bash
-curl -X POST http://localhost:3000/api/entregas \
-  -H "Content-Type: application/json" \
-  -d '{"descricao":"Notebook","origem":"Maceió","destino":"Recife"}'
-```
-
-```json
-{
-  "id": 1,
-  "descricao": "Notebook",
-  "origem": "Maceió",
-  "destino": "Recife",
-  "status": "CRIADA",
-  "motoristaId": null,
-  "historico": [
-    { "data": "2026-09-22T20:12:36.104Z", "descricao": "Entrega criada com status CRIADA" }
-  ]
-}
-```
-
-**Listar todas e filtrar por status**
-
-```bash
-curl http://localhost:3000/api/entregas
-curl "http://localhost:3000/api/entregas?status=CRIADA"
-```
-
-**Buscar uma entrega pelo id**
-
-```bash
-curl http://localhost:3000/api/entregas/1
-```
-
-**Avançar o status** (`CRIADA` → `EM_TRANSITO` → `ENTREGUE`)
-
-```bash
-curl -X PATCH http://localhost:3000/api/entregas/1/avancar
-```
-
-**Cancelar**
-
-```bash
-curl -X PATCH http://localhost:3000/api/entregas/1/cancelar
-```
-
-**Ver o histórico**
-
-```bash
-curl http://localhost:3000/api/entregas/1/historico
-```
-
-```json
-[
-  { "data": "2026-09-22T20:12:36.104Z", "descricao": "Entrega criada com status CRIADA" },
-  { "data": "2026-09-22T20:13:01.882Z", "descricao": "Status alterado para EM_TRANSITO" }
-]
-```
-
-**Cadastrar um motorista** (`placaVeiculo` é opcional)
-
-```bash
-curl -X POST http://localhost:3000/api/motoristas \
-  -H "Content-Type: application/json" \
-  -d '{"nome":"João","cpf":"123.456.789-00","placaVeiculo":"ABC1D23"}'
-```
-
-```json
-{
-  "id": 1,
-  "nome": "João",
-  "cpf": "123.456.789-00",
-  "placaVeiculo": "ABC1D23",
-  "status": "ATIVO"
-}
-```
-
-**Listar motoristas e buscar pelo id**
-
-```bash
-curl http://localhost:3000/api/motoristas
-curl http://localhost:3000/api/motoristas/1
-```
-
-**Atribuir um motorista a uma entrega**
-
-```bash
-curl -X PATCH http://localhost:3000/api/entregas/1/atribuir \
-  -H "Content-Type: application/json" \
-  -d '{"motoristaId":1}'
-```
-
-```json
-{
-  "id": 1,
-  "descricao": "Notebook",
-  "origem": "Maceió",
-  "destino": "Recife",
-  "status": "CRIADA",
-  "motoristaId": 1,
-  "historico": [
-    { "data": "2026-09-30T10:41:12.306Z", "descricao": "Entrega criada com status CRIADA" },
-    { "data": "2026-09-30T10:42:05.771Z", "descricao": "Entrega atribuída ao motorista João" }
-  ]
-}
-```
-
-**Entregas de um motorista** (com ou sem filtro de status)
-
-```bash
-curl http://localhost:3000/api/motoristas/1/entregas
-curl "http://localhost:3000/api/motoristas/1/entregas?status=CRIADA"
-```
-
-### Exemplos de erro
-
-```bash
-# 400 — origem igual ao destino
-curl -X POST http://localhost:3000/api/entregas \
-  -H "Content-Type: application/json" \
-  -d '{"descricao":"Teste","origem":"Recife","destino":"Recife"}'
-# {"erro":"origem e destino devem ser diferentes"}
-
-# 404 — entrega inexistente
-curl http://localhost:3000/api/entregas/99999
-# {"erro":"entrega não encontrada"}
-
-# 422 — avançar uma entrega já ENTREGUE
-curl -X PATCH http://localhost:3000/api/entregas/1/avancar
-# {"erro":"não é possível avançar uma entrega ENTREGUE"}
-
-# 409 — CPF já cadastrado
-curl -X POST http://localhost:3000/api/motoristas \
-  -H "Content-Type: application/json" \
-  -d '{"nome":"Outro João","cpf":"123.456.789-00"}'
-# {"erro":"já existe um motorista cadastrado com o cpf 123.456.789-00"}
-
-# 422 — atribuir motorista a uma entrega que não está CRIADA
-curl -X PATCH http://localhost:3000/api/entregas/1/atribuir \
-  -H "Content-Type: application/json" \
-  -d '{"motoristaId":1}'
-# {"erro":"não é possível atribuir motorista a uma entrega EM_TRANSITO"}
-```
-
----
-
-> Os dados ficam no SQLite (`prisma/dev.db`): ao reiniciar o servidor, tudo continua lá.
-> Para começar do zero: `npx prisma migrate reset`.
+| Tela                 | O que tem                                                                    |
+| -------------------- | ---------------------------------------------------------------------------- |
+| **Entregas**         | tabela com id, descrição, origem, destino e badge de status; filtro por status |
+| **Nova Entrega**     | formulário com descrição, origem e destino                                    |
+| **Detalhe**          | dados da entrega, motorista, botões *Avançar* / *Cancelar*, `<select>` de motorista (só em `CRIADA`) e histórico |
+| **Motoristas**       | tabela com nome, CPF, placa e badge de status                                 |
+| **Novo Motorista**   | formulário com nome, CPF e placa (opcional)                                   |
+| **Erro**             | código (404, 400, 500) e a mensagem, com link de volta                        |
